@@ -1,0 +1,68 @@
+---
+- name: Configure OPS445 Labs Environment
+  hosts: vmlab
+  user: student
+  become: yes
+  vars:
+    seneca_id: "dmuhammad4"
+    labs:
+      - lab1
+      - lab2
+      - lab3
+      - lab4
+      - lab5
+      - lab6
+      - lab7
+      - lab8
+    ssh_public_key: "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEAqg9j/6FGCfRtraDeP1gwfQA+cgQhxnzhRH9xr4W9lOfFbfAMvijXnQC3NOczRJ6X886eGJo4btNo4js2OexL96vruRt7cbyvSOoyhMAGkiyW92FmCJAeisxnIIQLbAQtcFyAVrrzqNlcNNGdSWY/WrXjbm2pMSrldnu+eqlJIX8= root@matrix"
+
+  tasks:
+    - name: Update Apache (httpd) to the latest version
+      yum:
+        name: httpd
+        state: latest
+
+    - name: Install EPEL repository if not installed
+      yum:
+        name: epel-release
+        state: present
+
+    - name: Remove the 'tree' package from the VM
+      yum:
+        name: tree
+        state: absent
+
+    - name: Set hostname to Seneca ID of the USER
+      hostname:
+        name: "{{ seneca_id }}"
+
+    - name: Create new user for Seneca ID and add to sudoers group
+      user:
+        name: "{{ seneca_id }}"
+        shell: /bin/bash
+        groups: wheel
+        append: yes
+        state: present
+
+    - name: Configure passwordless SSH access for the new user
+      authorized_key:
+        user: "{{ seneca_id }}"
+        state: present
+        key: "{{ ssh_public_key }}"
+
+    - name: Create the ops445 directory under the new user's home directory
+      file:
+        path: "/home/{{ seneca_id }}/ops445"
+        state: directory
+        owner: "{{ seneca_id }}"
+        group: "{{ seneca_id }}"
+        mode: '0755'
+
+    - name: Create lab directories under the newly created user directory
+      file:
+        path: "/home/{{ seneca_id }}/ops445/{{ item }}"
+        state: directory
+        owner: "{{ seneca_id }}"
+        group: "{{ seneca_id }}"
+        mode: '0755'
+      loop: "{{ labs }}"
